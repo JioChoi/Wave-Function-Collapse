@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Wave Function Collapse</title>
+</head>
+<body>
+	<canvas id="output" width="1280" height="720"></canvas>
+
+	<script>
+		var rule = 
+		[
+			[0,	11,	11,	11,	11,	11, 0],
+			[14, 7,  2,  2,  2,  8, 13],
+			[14, 1,  5,  5,  5,  3, 13],
+			[14, 1,  5,  5,  5,  3, 13],
+			[14, 1,  5,  5,  5,  3, 13],
+			[14, 1,  5,  5,  5,  3, 13],
+		];
+
+		function findPossible(num, sx, sy) {
+			var temp = [];
+
+			for(var y = 0; y < 6; y++) {
+				for(var x = 0; x < 7; x++) {
+					if(rule[y][x] == num) {
+						if(checkOut(x + sx, y + sy, 7, 6) == false) {
+							temp.push(rule[y + sy][x + sx]);
+						}
+						else {
+							temp.push(0);
+						}
+					}
+				}
+			}
+
+			return temp;
+		}
+
+		var width = 10;
+		var height = 10;
+		var tileNum = 19;
+
+		var canvas = document.getElementById("output");
+		var context = canvas.getContext("2d");
+		context.imageSmoothingEnabled= false;
+
+		var tile = new Image();
+		tile.src = "data/ntiles.png";
+
+		var map = new Array(height);
+		for(var at = 0; at < height; at++) {
+			map[at] = new Array(width);
+			for(var i = 0; i < width; i++) {
+				map[at][i] = -1;
+			}
+		}
+
+		function drawTile(x, y, at) {
+			context.drawImage(tile, at * 16, 0, 16, 16, x * 48, y * 48, 48, 48);
+		}
+
+		function random(max) {
+			return Math.floor(Math.random() * max);
+		}
+
+		function checkOut(x, y, w, h) {
+			if(x < 0 || x >= w || y < 0 || y >= h) {
+				return true;
+			}
+			return false;
+		}
+
+
+		function sleep(ms) {
+			const wakeUpTime = Date.now() + ms;
+			while (Date.now() < wakeUpTime) {
+				render();
+			}
+		}
+
+		function compareOne(at, x, y, sx, sy) {
+			if(!checkOut(x + sx, y + sy, width, height)) {
+				var list = findPossible(at, sx, sy);
+
+				if(map[y + sy][x + sx] == -1) {
+					return true;
+				}
+				for(var at = 0; at < list.length; at++) {
+					if(list[at] == map[y + sy][x + sx]) {
+						return true;
+					}
+				}
+				return false;
+			}
+		}
+
+		function isFine(x, y) {
+			var temp = map[y][x];
+
+			if(!compareOne(temp, x, y, 1, 0)) {
+				return false;
+			}
+			if(compareOne(temp, x, y, -1, 0)) {
+				return false;
+			}
+			if(compareOne(temp, x, y, 0, 1)) {
+				return false;
+			}
+			if(compareOne(temp, x, y, 0, -1)) {
+				return false;
+			}
+			return true;
+		}
+
+		function calculateTile(x, y, mx, my) {
+			if(checkOut(x + mx, y + my, width, height)) {
+				return;
+			}
+
+			if(mx == 0 && my == 0) {
+				//map[y][x] = random(tileNum);
+				map[y][x] = 5;
+				calculateTile(x + mx, y + my, 1, 0);
+				calculateTile(x + mx, y + my, -1, 0);
+				calculateTile(x + mx, y + my, 0, -1);
+				calculateTile(x + mx, y + my, 0, 1);
+				return;
+			}
+
+			if(map[y + my][x + mx] == -1) {
+				var temp = findPossible(map[y][x], mx, my);
+
+				for(var at = 0; at < temp.length; at++) {
+					map[y + my][x + mx] = temp[at];
+					if(isFine(x + mx, y + my)) {
+						break;
+					}
+				}
+				
+				map[y + my][x + mx] = temp[0];
+				console.log(x+mx, y+my, temp[0], isFine(x + mx, y + my));
+				
+				calculateTile(x + mx, y + my, -1, 0);
+				calculateTile(x + mx, y + my, 1, 0);
+				calculateTile(x + mx, y + my, 0, -1);
+				calculateTile(x + mx, y + my, 0, 1);
+			}
+		}
+
+		function render() {
+			context.clearRect(0, 0, canvas.width, canvas.height);
+
+			for(var y = 0; y < height; y++) {
+				for(var x = 0; x < width; x++) {
+					drawTile(x, y, map[y][x]);
+				}
+			}
+		}
+
+		tile.onload = function() {
+			calculateTile(5, 5, 0, 0);
+			render();
+		}
+	</script>
+</body>
+</html>
